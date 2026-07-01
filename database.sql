@@ -1,146 +1,227 @@
--- ============================================================
--- Script de création de la base de données
--- Gestion de carnet patients et rendez-vous - Hôpital
--- Conforme au MLD (Merise)
--- SGBD cible : MySQL / MariaDB
--- ============================================================
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : 127.0.0.1:3306
+-- Généré le : mer. 01 juil. 2026 à 16:15
+-- Version du serveur : 8.2.0
+-- Version de PHP : 8.2.13
 
-DROP DATABASE IF EXISTS gestion_hopital;
-CREATE DATABASE gestion_hopital
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
-USE gestion_hopital;
 
--- ============================================================
--- Table : SERVICE
--- ============================================================
-CREATE TABLE service (
-    idService           INT AUTO_INCREMENT PRIMARY KEY,
-    nomService           VARCHAR(100)        NOT NULL,
-    description          TEXT,
-    localisation         VARCHAR(100)
-) ENGINE=InnoDB;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- ============================================================
--- Table : MEDECIN
--- Association APPARTENIR (1,n - 1,1) : idService migre ici
--- ============================================================
-CREATE TABLE medecin (
-    idMedecin            INT AUTO_INCREMENT PRIMARY KEY,
-    nomMedecin           VARCHAR(50)         NOT NULL,
-    prenomMedecin        VARCHAR(50)         NOT NULL,
-    telephone            VARCHAR(20),
-    email                VARCHAR(100)        NOT NULL UNIQUE,
-    motDePasse           VARCHAR(255)        NOT NULL,
-    numOrdre             VARCHAR(30)         UNIQUE,
-    idService            INT                 NOT NULL,
+--
+-- Base de données : `gestion_hopital`
+--
 
-    CONSTRAINT fk_medecin_service
-        FOREIGN KEY (idService) REFERENCES service(idService)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT
-) ENGINE=InnoDB;
+-- --------------------------------------------------------
 
--- ============================================================
--- Table : PATIENT
--- ============================================================
-CREATE TABLE patient (
-    idPatient            INT AUTO_INCREMENT PRIMARY KEY,
-    nomPatient           VARCHAR(50)         NOT NULL,
-    prenomPatient        VARCHAR(50)         NOT NULL,
-    dateNaissance        DATE                NOT NULL,
-    sexe                 ENUM('M', 'F')      NOT NULL,
-    telephone            VARCHAR(20),
-    email                VARCHAR(100)        NOT NULL UNIQUE,
-    motDePasse           VARCHAR(255)        NOT NULL,
-    adresse              VARCHAR(150),
-    groupeSanguin        VARCHAR(5),
-    dateCreationDossier  DATE                NOT NULL DEFAULT (CURRENT_DATE)
-) ENGINE=InnoDB;
+--
+-- Structure de la table `consultation`
+--
 
--- ============================================================
--- Table : RENDEZVOUS
--- Association CONCERNER (1,n - 1,1) : idPatient migre ici
--- Association DEMANDER  (1,n - 1,1) : idService migre ici
--- ============================================================
-CREATE TABLE rendezvous (
-    idRdv                INT AUTO_INCREMENT PRIMARY KEY,
-    dateRdv              DATE                NOT NULL,
-    heureRdv             TIME                NOT NULL,
-    motif                VARCHAR(255),
-    statut               ENUM('programme', 'confirme', 'annule', 'termine')
-                                              NOT NULL DEFAULT 'programme',
-    idPatient            INT                 NOT NULL,
-    idService            INT                 NOT NULL,
+DROP TABLE IF EXISTS `consultation`;
+CREATE TABLE IF NOT EXISTS `consultation` (
+  `idConsultation` int NOT NULL AUTO_INCREMENT,
+  `diagnostic` text COLLATE utf8mb4_unicode_ci,
+  `traitement` text COLLATE utf8mb4_unicode_ci,
+  `observations` text COLLATE utf8mb4_unicode_ci,
+  `dateConsultation` date NOT NULL,
+  `idMedecin` int NOT NULL,
+  `idRdv` int NOT NULL,
+  PRIMARY KEY (`idConsultation`),
+  UNIQUE KEY `idRdv` (`idRdv`),
+  KEY `fk_consultation_medecin` (`idMedecin`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CONSTRAINT fk_rdv_patient
-        FOREIGN KEY (idPatient) REFERENCES patient(idPatient)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT,
+-- --------------------------------------------------------
 
-    CONSTRAINT fk_rdv_service
-        FOREIGN KEY (idService) REFERENCES service(idService)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT
-) ENGINE=InnoDB;
+--
+-- Structure de la table `medecin`
+--
 
--- ============================================================
--- Table : CONSULTATION
--- Association REALISER (1,n - 1,1) : idMedecin migre ici
--- Association ABOUTIR   (1,1 - 0,1) : idRdv migre ici (UNIQUE)
--- ============================================================
-CREATE TABLE consultation (
-    idConsultation       INT AUTO_INCREMENT PRIMARY KEY,
-    diagnostic           TEXT,
-    traitement           TEXT,
-    observations         TEXT,
-    dateConsultation     DATE                NOT NULL,
-    idMedecin            INT                 NOT NULL,
-    idRdv                INT                 NOT NULL UNIQUE,
+DROP TABLE IF EXISTS `medecin`;
+CREATE TABLE IF NOT EXISTS `medecin` (
+  `idMedecin` int NOT NULL AUTO_INCREMENT,
+  `nomMedecin` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `prenomMedecin` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `telephone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `motDePasse` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `numOrdre` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `idService` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idMedecin`),
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `numOrdre` (`numOrdre`),
+  KEY `fk_medecin_service` (`idService`),
+  KEY `idx_medecin_nom` (`nomMedecin`,`prenomMedecin`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CONSTRAINT fk_consultation_medecin
-        FOREIGN KEY (idMedecin) REFERENCES medecin(idMedecin)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT,
+--
+-- Déchargement des données de la table `medecin`
+--
 
-    CONSTRAINT fk_consultation_rdv
-        FOREIGN KEY (idRdv) REFERENCES rendezvous(idRdv)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE
-) ENGINE=InnoDB;
+INSERT INTO `medecin` (`idMedecin`, `nomMedecin`, `prenomMedecin`, `telephone`, `email`, `motDePasse`, `numOrdre`, `idService`) VALUES
+(5, 'cyc', 'cyc', '655659053', 'cyc@gmail.com', '$2y$10$2DuybUsrbiarXkRRo/XooOr1mS.OTmDusD3XBt0C8SCGqhPYkmpm.', 'ORD-20260629-8750', 1);
 
--- ============================================================
--- Index utiles pour les recherches fréquentes
--- ============================================================
-CREATE INDEX idx_rdv_date ON rendezvous(dateRdv);
-CREATE INDEX idx_patient_nom ON patient(nomPatient, prenomPatient);
-CREATE INDEX idx_medecin_nom ON medecin(nomMedecin, prenomMedecin);
+-- --------------------------------------------------------
 
--- ============================================================
--- Données de test (optionnel)
--- ============================================================
-INSERT INTO service (nomService, description, localisation) VALUES
-('Cardiologie', 'Service des maladies cardiovasculaires', 'Bâtiment A, 1er étage'),
-('Pédiatrie', 'Service de médecine pour enfants', 'Bâtiment B, RDC'),
-('Médecine générale', 'Consultations générales', 'Bâtiment A, RDC');
+--
+-- Structure de la table `patient`
+--
 
--- NOTE : les mots de passe ci-dessous sont des hachages bcrypt fictifs
--- (à générer côté application avec password_hash() en PHP, bcrypt en Django, etc.)
--- Ne JAMAIS stocker de mot de passe en clair dans la base.
+DROP TABLE IF EXISTS `patient`;
+CREATE TABLE IF NOT EXISTS `patient` (
+  `idPatient` int NOT NULL AUTO_INCREMENT,
+  `nomPatient` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `prenomPatient` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dateNaissance` date NOT NULL,
+  `sexe` enum('M','F') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `telephone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `motDePasse` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `adresse` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `groupeSanguin` varchar(5) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dateCreationDossier` date NOT NULL,
+  PRIMARY KEY (`idPatient`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_patient_nom` (`nomPatient`,`prenomPatient`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO medecin (nomMedecin, prenomMedecin, telephone, email, motDePasse, numOrdre, idService) VALUES
-('Fankem', 'Michael', '699000001', 'fankem.michael@hopital.cm', '$2y$10$exempleHachageBcrypt1', 'ORD-001', 1),
-('Yonzo', 'Paul', '699000002', 'yonzo.paul@hopital.cm', '$2y$10$exempleHachageBcrypt2', 'ORD-002', 2),
-('Woungang', 'Romuald', '699000003', 'woungang.romuald@hopital.cm', '$2y$10$exempleHachageBcrypt3', 'ORD-003', 3);
+--
+-- Déchargement des données de la table `patient`
+--
 
-INSERT INTO patient (nomPatient, prenomPatient, dateNaissance, sexe, telephone, email, motDePasse, adresse, groupeSanguin) VALUES
-('Talla', 'Cyrias', '2000-05-12', 'M', '655000001', 'cyrias.talla@gmail.com', '$2y$10$exempleHachageBcrypt4', 'Bafoussam, Cameroun', 'O+'),
-('Makamto', 'Handersone', '1995-08-23', 'F', '655000002', 'handersone.makamto@gmail.com', '$2y$10$exempleHachageBcrypt5', 'Bafoussam, Cameroun', 'A+');
+INSERT INTO `patient` (`idPatient`, `nomPatient`, `prenomPatient`, `dateNaissance`, `sexe`, `telephone`, `email`, `motDePasse`, `adresse`, `groupeSanguin`, `dateCreationDossier`) VALUES
+(3, 'cyc', 'cyc', '2026-06-06', 'M', '655659053', 'cyc@gmail.com', '$2y$10$2cAlxUQ3f.Os1SkABdoULu3GsGcvqmqkAdkX7STzmRAb.ANYhbqkW', 'cyc', 'A-', '2026-06-29');
 
-INSERT INTO rendezvous (dateRdv, heureRdv, motif, statut, idPatient, idService) VALUES
-('2026-06-25', '09:00:00', 'Douleurs thoraciques', 'confirme', 1, 1),
-('2026-06-26', '10:30:00', 'Consultation de routine', 'programme', 2, 3);
+-- --------------------------------------------------------
 
-INSERT INTO consultation (diagnostic, traitement, observations, dateConsultation, idMedecin, idRdv) VALUES
-('Tension artérielle légèrement élevée', 'Repos et suivi tensionnel hebdomadaire', 'Patient à revoir dans 1 mois', '2026-06-25', 1, 1);
+--
+-- Structure de la table `rendezvous`
+--
+
+DROP TABLE IF EXISTS `rendezvous`;
+CREATE TABLE IF NOT EXISTS `rendezvous` (
+  `idRdv` int NOT NULL AUTO_INCREMENT,
+  `dateRdv` date NOT NULL,
+  `heureRdv` time NOT NULL,
+  `motif` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `statut` enum('programme','confirme','annule','termine') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'programme',
+  `idPatient` int NOT NULL,
+  `idService` int NOT NULL,
+  PRIMARY KEY (`idRdv`),
+  KEY `fk_rdv_patient` (`idPatient`),
+  KEY `fk_rdv_service` (`idService`),
+  KEY `idx_rdv_date` (`dateRdv`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `ordonnance`
+--
+
+DROP TABLE IF EXISTS `ordonnance`;
+CREATE TABLE IF NOT EXISTS `ordonnance` (
+  `idOrdonnance` int NOT NULL AUTO_INCREMENT,
+  `medicament` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dosage` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `duree` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `instructions` text COLLATE utf8mb4_unicode_ci,
+  `dateOrdonnance` date NOT NULL,
+  `idConsultation` int NOT NULL,
+  PRIMARY KEY (`idOrdonnance`),
+  KEY `fk_ordonnance_consultation` (`idConsultation`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `resultat`
+--
+
+DROP TABLE IF EXISTS `resultat`;
+CREATE TABLE IF NOT EXISTS `resultat` (
+  `idResultat` int NOT NULL AUTO_INCREMENT,
+  `typeTest` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `resultat` text COLLATE utf8mb4_unicode_ci,
+  `valeurNormale` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dateTest` date NOT NULL,
+  `idConsultation` int NOT NULL,
+  PRIMARY KEY (`idResultat`),
+  KEY `fk_resultat_consultation` (`idConsultation`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `service`
+--
+
+DROP TABLE IF EXISTS `service`;
+CREATE TABLE IF NOT EXISTS `service` (
+  `idService` int NOT NULL AUTO_INCREMENT,
+  `nomService` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `localisation` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`idService`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `service`
+--
+
+INSERT INTO `service` (`idService`, `nomService`, `description`, `localisation`) VALUES
+(1, 'Cardiologie', 'Service des maladies cardiovasculaires', 'Bâtiment A, 1er étage'),
+(2, 'Pédiatrie', 'Service de médecine pour enfants', 'Bâtiment B, CMR'),
+(3, 'Médecine générale', 'Consultations générales', 'Bâtiment A, CMR');
+
+--
+-- Contraintes pour les tables déchargées
+--
+
+--
+-- Contraintes pour la table `consultation`
+--
+ALTER TABLE `consultation`
+  ADD CONSTRAINT `fk_consultation_medecin` FOREIGN KEY (`idMedecin`) REFERENCES `medecin` (`idMedecin`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_consultation_rdv` FOREIGN KEY (`idRdv`) REFERENCES `rendezvous` (`idRdv`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Contraintes pour la table `medecin`
+--
+ALTER TABLE `medecin`
+  ADD CONSTRAINT `fk_medecin_service` FOREIGN KEY (`idService`) REFERENCES `service` (`idService`) ON UPDATE CASCADE;
+
+--
+-- Contraintes pour la table `rendezvous`
+--
+ALTER TABLE `rendezvous`
+  ADD CONSTRAINT `fk_rdv_patient` FOREIGN KEY (`idPatient`) REFERENCES `patient` (`idPatient`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_rdv_service` FOREIGN KEY (`idService`) REFERENCES `service` (`idService`) ON UPDATE CASCADE;
+
+--
+-- Contraintes pour la table `ordonnance`
+--
+ALTER TABLE `ordonnance`
+  ADD CONSTRAINT `fk_ordonnance_consultation` FOREIGN KEY (`idConsultation`) REFERENCES `consultation` (`idConsultation`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Contraintes pour la table `resultat`
+--
+ALTER TABLE `resultat`
+  ADD CONSTRAINT `fk_resultat_consultation` FOREIGN KEY (`idConsultation`) REFERENCES `consultation` (`idConsultation`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
